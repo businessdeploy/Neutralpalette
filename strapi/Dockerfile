@@ -1,27 +1,19 @@
 FROM node:20-alpine AS base
 
 # Install dependencies for sharp and native modules
-RUN apk add --no-cache libc6-compat vips-dev
+RUN apk add --no-cache libc6-compat vips-dev python3 make g++
 
-# Dependencies stage
-FROM base AS deps
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps
-
-# Builder stage
+# Builder stage - install and build in the same stage
 FROM base AS builder
 WORKDIR /app
 
-# Accept build args
-ARG APP_KEYS
-ARG API_TOKEN_SALT
-ARG ADMIN_JWT_SECRET
-ARG JWT_SECRET
-ARG TRANSFER_TOKEN_SALT
+# Copy package files first
+COPY package.json package-lock.json ./
 
-COPY --from=deps /app/node_modules ./node_modules
+# Install dependencies including native modules
+RUN npm install --legacy-peer-deps
+
+# Copy source code
 COPY . .
 
 # Create .tmp directory for SQLite during build
@@ -33,13 +25,13 @@ ENV HOST=0.0.0.0
 ENV PORT=1337
 ENV DATABASE_CLIENT=sqlite
 ENV DATABASE_FILENAME=.tmp/data.db
-# Use ARG values for build
-ENV APP_KEYS=${APP_KEYS:-key1,key2,key3,key4}
-ENV API_TOKEN_SALT=${API_TOKEN_SALT:-buildsalt}
-ENV ADMIN_JWT_SECRET=${ADMIN_JWT_SECRET:-buildsecret}
-ENV JWT_SECRET=${JWT_SECRET:-buildjwt}
-ENV TRANSFER_TOKEN_SALT=${TRANSFER_TOKEN_SALT:-buildtransfer}
+ENV APP_KEYS=buildkey1,buildkey2,buildkey3,buildkey4
+ENV API_TOKEN_SALT=buildsalt
+ENV ADMIN_JWT_SECRET=buildsecret
+ENV JWT_SECRET=buildjwt
+ENV TRANSFER_TOKEN_SALT=buildtransfer
 
+# Build Strapi
 RUN npm run build
 
 # Production stage
@@ -52,7 +44,7 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 strapi
 RUN adduser --system --uid 1001 strapi
 
-# Copy necessary files
+# Copy all necessary files from builder
 COPY --from=builder --chown=strapi:strapi /app/package.json ./
 COPY --from=builder --chown=strapi:strapi /app/package-lock.json ./
 COPY --from=builder --chown=strapi:strapi /app/node_modules ./node_modules
