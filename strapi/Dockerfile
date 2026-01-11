@@ -1,6 +1,5 @@
-# syntax=docker/dockerfile:1
-# Force x86_64 platform for SWC compatibility
-FROM --platform=linux/amd64 node:20-slim AS builder
+# Use Debian-based image for glibc compatibility
+FROM node:20-slim AS builder
 
 # Install dependencies for sharp and native modules
 RUN apt-get update && apt-get install -y \
@@ -17,6 +16,9 @@ COPY package.json package-lock.json ./
 
 # Install dependencies
 RUN npm install --legacy-peer-deps
+
+# Explicitly install the correct SWC binary for Linux x64
+RUN npm install @swc/core-linux-x64-gnu --save-optional --legacy-peer-deps || true
 
 # Force rebuild of native modules
 RUN npm rebuild
@@ -42,8 +44,8 @@ ENV TRANSFER_TOKEN_SALT=buildtransfer
 # Build Strapi
 RUN npm run build
 
-# Production stage - also force amd64
-FROM --platform=linux/amd64 node:20-slim AS runner
+# Production stage
+FROM node:20-slim AS runner
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y libvips-dev && rm -rf /var/lib/apt/lists/*
