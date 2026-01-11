@@ -1,7 +1,13 @@
-FROM node:20-alpine AS base
+# Use Debian-based image instead of Alpine for glibc compatibility with @swc/core
+FROM node:20-slim AS base
 
 # Install dependencies for sharp and native modules
-RUN apk add --no-cache libc6-compat vips-dev python3 make g++
+RUN apt-get update && apt-get install -y \
+    libvips-dev \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Builder stage - install and build in the same stage
 FROM base AS builder
@@ -41,8 +47,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Create non-root user
-RUN addgroup --system --gid 1001 strapi
-RUN adduser --system --uid 1001 strapi
+RUN groupadd --system --gid 1001 strapi
+RUN useradd --system --uid 1001 --gid strapi strapi
 
 # Copy all necessary files from builder
 COPY --from=builder --chown=strapi:strapi /app/package.json ./
