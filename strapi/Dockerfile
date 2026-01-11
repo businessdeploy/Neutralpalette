@@ -1,5 +1,5 @@
-# Use Debian-based image instead of Alpine for glibc compatibility with @swc/core
-FROM node:20-slim AS base
+# Use Debian-based image for glibc compatibility
+FROM node:20-slim AS builder
 
 # Install dependencies for sharp and native modules
 RUN apt-get update && apt-get install -y \
@@ -9,15 +9,16 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Builder stage - install and build in the same stage
-FROM base AS builder
 WORKDIR /app
 
 # Copy package files first
 COPY package.json package-lock.json ./
 
-# Install dependencies including native modules
+# Install dependencies
 RUN npm install --legacy-peer-deps
+
+# Force rebuild of native modules for current architecture
+RUN npm rebuild
 
 # Copy source code
 COPY . .
@@ -41,14 +42,18 @@ ENV TRANSFER_TOKEN_SALT=buildtransfer
 RUN npm run build
 
 # Production stage
-FROM base AS runner
+FROM node:20-slim AS runner
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y libvips-dev && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 ENV NODE_ENV=production
 
 # Create non-root user
-RUN groupadd --system --gid 1001 strapi
-RUN useradd --system --uid 1001 --gid strapi strapi
+RUN groupadd --system --gid 1001 strapi && \
+    useradd --system --uid 1001 --gid strapi strapi
 
 # Copy all necessary files from builder
 COPY --from=builder --chown=strapi:strapi /app/package.json ./
