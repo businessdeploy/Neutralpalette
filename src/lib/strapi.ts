@@ -101,6 +101,7 @@ function transformProduct(strapiProduct: StrapiProduct): Product {
         category: (strapiProduct.category?.slug || 'accessories') as ProductCategory,
         colors: strapiProduct.colors || [{ name: 'Default', hex: '#000000' }],
         sizes: strapiProduct.sizes || undefined,
+        tags: [],
         isNew: strapiProduct.isNew || false,
         isBestseller: strapiProduct.isBestseller || false,
         stock: strapiProduct.stock || 0,
