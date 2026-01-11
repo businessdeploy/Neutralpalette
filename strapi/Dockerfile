@@ -17,8 +17,8 @@ COPY package.json package-lock.json ./
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Explicitly install the correct SWC binary for Linux x64
-RUN npm install @swc/core-linux-x64-gnu --save-optional --legacy-peer-deps || true
+# Explicitly install the correct native bindings for Linux x64
+RUN npm install @swc/core-linux-x64-gnu @rollup/rollup-linux-x64-gnu --save-optional --legacy-peer-deps || true
 
 # Force rebuild of native modules
 RUN npm rebuild
