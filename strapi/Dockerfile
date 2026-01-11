@@ -17,13 +17,20 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Create .tmp directory for SQLite during build
+RUN mkdir -p .tmp
+
 # Environment variables needed for build
 ENV NODE_ENV=production
-# These are placeholders - actual values are provided at runtime
 ENV HOST=0.0.0.0
 ENV PORT=1337
 ENV DATABASE_CLIENT=sqlite
 ENV DATABASE_FILENAME=.tmp/data.db
+ENV APP_KEYS=build-key-1,build-key-2,build-key-3,build-key-4
+ENV API_TOKEN_SALT=build-api-token-salt
+ENV ADMIN_JWT_SECRET=build-admin-jwt-secret
+ENV JWT_SECRET=build-jwt-secret
+ENV TRANSFER_TOKEN_SALT=build-transfer-token-salt
 
 RUN npm run build
 
@@ -49,8 +56,8 @@ COPY --from=builder --chown=strapi:strapi /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --chown=strapi:strapi /app/types ./types
 COPY --from=builder --chown=strapi:strapi /app/favicon.png ./favicon.png
 
-# Create uploads directory
-RUN mkdir -p /app/public/uploads && chown -R strapi:strapi /app/public/uploads
+# Create uploads and tmp directories
+RUN mkdir -p /app/public/uploads /app/.tmp && chown -R strapi:strapi /app/public/uploads /app/.tmp
 
 USER strapi
 
