@@ -8,11 +8,18 @@ FROM base AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Builder stage
 FROM base AS builder
 WORKDIR /app
+
+# Accept build args
+ARG APP_KEYS
+ARG API_TOKEN_SALT
+ARG ADMIN_JWT_SECRET
+ARG JWT_SECRET
+ARG TRANSFER_TOKEN_SALT
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -20,17 +27,18 @@ COPY . .
 # Create .tmp directory for SQLite during build
 RUN mkdir -p .tmp
 
-# Environment variables needed for build
+# Set environment for build
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=1337
 ENV DATABASE_CLIENT=sqlite
 ENV DATABASE_FILENAME=.tmp/data.db
-ENV APP_KEYS=build-key-1,build-key-2,build-key-3,build-key-4
-ENV API_TOKEN_SALT=build-api-token-salt
-ENV ADMIN_JWT_SECRET=build-admin-jwt-secret
-ENV JWT_SECRET=build-jwt-secret
-ENV TRANSFER_TOKEN_SALT=build-transfer-token-salt
+# Use ARG values for build
+ENV APP_KEYS=${APP_KEYS:-key1,key2,key3,key4}
+ENV API_TOKEN_SALT=${API_TOKEN_SALT:-buildsalt}
+ENV ADMIN_JWT_SECRET=${ADMIN_JWT_SECRET:-buildsecret}
+ENV JWT_SECRET=${JWT_SECRET:-buildjwt}
+ENV TRANSFER_TOKEN_SALT=${TRANSFER_TOKEN_SALT:-buildtransfer}
 
 RUN npm run build
 
