@@ -1,5 +1,6 @@
-# Use Debian-based image for glibc compatibility
-FROM node:20-slim AS builder
+# syntax=docker/dockerfile:1
+# Force x86_64 platform for SWC compatibility
+FROM --platform=linux/amd64 node:20-slim AS builder
 
 # Install dependencies for sharp and native modules
 RUN apt-get update && apt-get install -y \
@@ -17,7 +18,7 @@ COPY package.json package-lock.json ./
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Force rebuild of native modules for current architecture
+# Force rebuild of native modules
 RUN npm rebuild
 
 # Copy source code
@@ -41,8 +42,8 @@ ENV TRANSFER_TOKEN_SALT=buildtransfer
 # Build Strapi
 RUN npm run build
 
-# Production stage
-FROM node:20-slim AS runner
+# Production stage - also force amd64
+FROM --platform=linux/amd64 node:20-slim AS runner
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y libvips-dev && rm -rf /var/lib/apt/lists/*
